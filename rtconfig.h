@@ -15,7 +15,7 @@
 // </integer>
 #define RT_THREAD_PRIORITY_MAX	32
 // <integer name="RT_TICK_PER_SECOND" description="OS tick per second" default="100" />
-#define RT_TICK_PER_SECOND	100
+#define RT_TICK_PER_SECOND	200
 // <integer name="IDLE_THREAD_STACK_SIZE" description="The stack size of idle thread" default="512" />
 #define IDLE_THREAD_STACK_SIZE	512
 // <section name="RT_DEBUG" description="Kernel Debug Configuration" default="true" >

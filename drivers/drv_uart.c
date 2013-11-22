@@ -17,15 +17,12 @@
 #include <rtdevice.h>
 
 #include "board.h"
+#include "serial.h"
 
 
-// struct lpc_uart
-// {
-//     UART_ID_Type UART;
-//     IRQn_Type UART_IRQn;
-// };
 
-static rt_err_t lpc_configure(struct rt_serial_device *serial, struct serial_configure *cfg)
+
+static rt_err_t uart_configure(struct rt_serial_device *serial, struct serial_configure *cfg)
 {
 //     struct lpc_uart *uart;
 //     UART_CFG_Type UARTConfigStruct;
@@ -63,12 +60,12 @@ static rt_err_t lpc_configure(struct rt_serial_device *serial, struct serial_con
     return RT_EOK;
 }
 
-static rt_err_t lpc_control(struct rt_serial_device *serial, int cmd, void *arg)
+static rt_err_t uart_control(struct rt_serial_device *serial, int cmd, void *arg)
 {
     struct lpc_uart *uart;
 
     RT_ASSERT(serial != RT_NULL);
-    uart = (struct lpc_uart *)serial->parent.user_data;
+    uart = (struct s3c_uart *)serial->parent.user_data;
 
     switch (cmd)
     {
@@ -107,61 +104,39 @@ static int lpc_getc(struct rt_serial_device *serial)
     return -1;
 }
 
-static const struct rt_uart_ops lpc_uart_ops =
+static const struct rt_uart_ops s3c_uart_ops =
 {
-    lpc_configure,
-    lpc_control,
+    uart_configure,
+    uart_control,
     lpc_putc,
     lpc_getc,
 };
 
 #if defined(RT_USING_UART0)
 /* UART0 device driver structure */
-struct serial_ringbuffer uart0_int_rx;
-struct lpc_uart uart0 =
+#define UART0	((struct uartport *)&U0BASE)
+struct serial_int_rx uart0_int_rx;
+struct serial_device uart0 =
 {
-    UART_0,
-    UART0_IRQn,
+	UART0,
+	&uart0_int_rx,
+	RT_NULL
 };
-struct rt_serial_device serial0;
+struct rt_device uart0_device;
 
-void UART0_IRQHandler(void)
+/**
+ * This function will handle serial
+ */
+static void rt_serial0_handler(int vector, void *param)
 {
-    struct lpc_uart *uart;
-    uint32_t intsrc, tmp, tmp1;
+	INTSUBMSK |= (BIT_SUB_RXD0);
 
-    uart = &uart0;
+	rt_hw_serial_isr(&uart0_device);
 
-    /* enter interrupt */
-    rt_interrupt_enter();
+	SUBSRCPND |= BIT_SUB_RXD0;
 
-    /* Determine the interrupt source */
-    intsrc = UART_GetIntId(uart->UART);
-    tmp = intsrc & UART_IIR_INTID_MASK;
-
-    // Receive Line Status
-    if (tmp == UART_IIR_INTID_RLS)
-    {
-        // Check line status
-        tmp1 = UART_GetLineStatus(uart->UART);
-        // Mask out the Receive Ready and Transmit Holding empty status
-        tmp1 &= (UART_LSR_OE | UART_LSR_PE | UART_LSR_FE \
-                 | UART_LSR_BI | UART_LSR_RXFE);
-        // If any error exist
-        if (tmp1)
-        {
-            //
-        }
-    }
-
-    // Receive Data Available or Character time-out
-    if ((tmp == UART_IIR_INTID_RDA) || (tmp == UART_IIR_INTID_CTI))
-    {
-        rt_hw_serial_isr(&serial0);
-    }
-
-    /* leave interrupt */
-    rt_interrupt_leave();
+	/* Unmask sub interrupt (RXD0) */
+	INTSUBMSK  &=~(BIT_SUB_RXD0);
 }
 #endif
 
@@ -183,23 +158,7 @@ void rt_hw_uart_init(void)
     serial0.int_rx = &uart0_int_rx;
     serial0.config = config;
 
-    /*
-     * Initialize UART0 pin connect
-     * P0.2: U0_TXD
-     * P0.3: U0_RXD
-     */
-//     PINSEL_ConfigPin(0, 2, 1);
-//     PINSEL_ConfigPin(0, 3, 1);
-
-    /* preemption = 1, sub-priority = 1 */
-  //  NVIC_SetPriority(uart->UART_IRQn, ((0x01 << 3) | 0x01));
-
-    /* Enable Interrupt for UART channel */
-   // NVIC_EnableIRQ(uart->UART_IRQn);
-
-    /* register UART1 device */
-    rt_hw_serial_register(&serial0, "uart0",
-                          RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_STREAM,
-                          uart);
+ 	rt_hw_interrupt_install(INTUART0, rt_serial0_handler, RT_NULL, "UART0");
+	rt_hw_interrupt_umask(INTUART0);
 #endif
 }

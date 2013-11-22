@@ -19,10 +19,7 @@
 
 #include "board.h"
 #include "drv_uart.h"
-//#include "drv_lcd.h"
-#ifdef LPC_EXT_SDRAM
-//#include "drv_sdram.h"
-#endif
+
 
 /**
  * This is the timer interrupt service routine.
@@ -31,18 +28,18 @@
 void Timer0_Handler(void)
 {
     /* enter interrupt */
-    rt_interrupt_enter();
+   // rt_interrupt_enter();
 
-    rt_tick_increase();
+    //rt_tick_increase();
 
     /* leave interrupt */
-    rt_interrupt_leave();
+   // rt_interrupt_leave();
 }
 void rt_timer_hw_init()
 {
  VIC0VECTADDR(23)=(volatile unsigned long)Timer0_Handler;//中断服务函数入口
 	 TCFG0 =65;   			// 设置分频因子(66分频), 定时器时钟频率为1Mhz
-	 TCNTB0 = (1000/RT_TICK_PER_SECOND)*1000;     //设置初值，用于TCTB0
+	 TCNTB0 = RT_TICK_PER_SECOND*1000;     //设置初值，用于TCTB0
 	 TCON |= 1<<1;      	//设置初值后要更新TCNTB
 	 TCON |= 1<<3;     	//自动重装开启
 	 TCON &= ~(1<<1);   	//不再Update TCNTB0,TCMPB0
@@ -50,33 +47,41 @@ void rt_timer_hw_init()
 	 TINT_CSTAT=1<<5;			//清除定时器状态位
 	 TINT_CSTAT |= 1<<0;       //开timer0中断,允许timer0中断发生
 	 VIC0INTENABLE |= 1<<23;   //开timer0的使能
+//	VIC0VECTADDR(23)=(volatile unsigned long)Timer0_Handler;//中断服务函数入口
+//	 TCFG0 =65;   			// 设置分频因子(66分频), 定时器时钟频率为1Mhz
+//	 TCNTB0 = 1000*1000;     //设置初值，用于TCTB0
+//	 TCON |= 1<<1;      	//设置初值后要更新TCNTB
+//	 TCON |= 1<<3;     	//自动重装开启
+//	 TCON &= ~(1<<1);   	//不再Update TCNTB0,TCMPB0
+//	 TCON |= 1<<0;       	//timer0 open;
+//	 TINT_CSTAT=1<<5;			//清除定时器状态位
+//	 TINT_CSTAT |= 1<<0;       //开timer0中断,允许timer0中断发生
+//	 VIC0INTENABLE |= 1<<23;   //开timer0的使能
 }
 /**
  * This function will initial LPC17xx board.
  */
 void rt_hw_board_init()
 {
-//     /* NVIC Configuration */
-// #define NVIC_VTOR_MASK              0x3FFFFF80
-// #ifdef  VECT_TAB_RAM
-//     /* Set the Vector Table base location at 0x10000000 */
-//     SCB->VTOR  = (0x10000000 & NVIC_VTOR_MASK);
-// #else  /* VECT_TAB_FLASH  */
-//     /* Set the Vector Table base location at 0x00000000 */
-//     SCB->VTOR  = (0x00000000 & NVIC_VTOR_MASK);
-// #endif
+	/* initialize led port */
+	rt_hw_led_init();
 
-    /* init systick */
-//     SysTick_Config(SystemCoreClock / RT_TICK_PER_SECOND - 1);
-//     /* set pend exception priority */
-//     NVIC_SetPriority(PendSV_IRQn, (1 << __NVIC_PRIO_BITS) - 1);
-       rt_timer_hw_init();
-//     rt_hw_uart_init();
+	/* initialize uart */
+	rt_hw_uart_init();
+
+	/* initialize mmu */
+	rt_hw_mmu_init();
+	
+	/* initialize timer0 */
+   rt_timer_hw_init();
+       //rt_hw_uart_init();
+//	     while(1)
+//				 {
+//          //GPIOK->DAT^=(0x01<<4);
+//					 i=500000;
+//					 while(i--);
+//        }
 //     rt_console_set_device(RT_CONSOLE_DEVICE_NAME);
 //     rt_led_hw_init();
-#if LPC_EXT_SDRAM == 1
-    rt_kprintf("Initialize SDRAM ...");
-    lpc_sdram_hw_init();
-    rt_kprintf("done!\n");
-#endif
+
 }

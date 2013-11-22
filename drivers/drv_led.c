@@ -6,7 +6,7 @@
 #define LED_NUM    4
 struct led_ctrl
 {
-    uint32_t num;
+    rt_uint32_t num;
     volatile unsigned port;
 };
 
@@ -23,16 +23,16 @@ static struct lpc_led led;
 static rt_err_t rt_led_init(rt_device_t dev)
 {
     /* led0 :GPK4,led1:GPK5,led3 :GPK6,led4:GPK7 */
-   GPKCON0|=0x11110000;   //设置GPK的高四位为GPIO输出
-   GPKDAT|=0xf0;          //设置GPK的高四位输出高电平，关闭LED
+   GPIOK->CON0=0x11110000;   //设置GPK的高四位为GPIO输出
+   GPIOK->DAT|=0xf0;          //设置GPK的高四位输出高电平，关闭LED
     led.ctrl[0].num = 4;
-    led.ctrl[0].port = GPKDAT;
+    led.ctrl[0].port = GPIOK->DAT;
     led.ctrl[1].num = 5;
-    led.ctrl[1].port =  GPKDAT;
+    led.ctrl[1].port =  GPIOK->DAT;
 	  led.ctrl[2].num = 6;
-    led.ctrl[2].port = GPKDAT;
+    led.ctrl[2].port = GPIOK->DAT;
     led.ctrl[3].num = 7;
-    led.ctrl[3].port =  GPKDAT;
+    led.ctrl[3].port = GPIOK->DAT;
     return RT_EOK;
 }
 
